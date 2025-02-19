@@ -15,26 +15,23 @@ export const createFileTransport = (options = {}) => {
   }
 
   const filePath = path.join(logDir, filename);
+  const writeStream = fs.createWriteStream(filePath, { flags: 'a' });
 
-  // Function to write logs based on the specified format
+  // Pre-compile format function based on type
+  const formatLog = format === 'json'
+      ? (info) => JSON.stringify(info) + '\n'
+      : (info) => `${info.timestamp || new Date().toISOString()} [${info.level}] ${info.message}${info.meta ? ' ' + JSON.stringify(info.meta) : ''}\n`;
+
+  // Simple write function
   const write = (info) => {
-    let logEntry;
-    
-    if (format === 'json') {
-      logEntry = JSON.stringify(info) + '\n';
-    } else {
-      // Human readable format
-      logEntry = `${info.timestamp || new Date().toISOString()} [${info.level}] ${info.message} ${info.meta ? JSON.stringify(info.meta) : ''}\n`;
-    }
-
-    try {
-      fs.appendFileSync(filePath, logEntry);
-    } catch (error) {
-      console.error('Error writing log to file:', error);
-    }
+      try {
+          writeStream.write(formatLog(info));
+      } catch (error) {
+          console.error('Error writing log:', error);
+      }
   };
 
-  return {
-    log: write
-  };
+  process.on('exit', () => writeStream.end());
+
+  return { log: write };
 };
