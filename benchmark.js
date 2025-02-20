@@ -30,7 +30,7 @@ const snapLog = createLogger({
 });
 
 const winstonLogger = winston.createLogger({
-  level: "info",
+  level: "debug",
   format: winston.format.json(),
   transports: [
     new winston.transports.File({
@@ -38,6 +38,15 @@ const winstonLogger = winston.createLogger({
     }),
   ],
 });
+
+async function clearLogFiles() {
+  try {
+    await fs.promises.writeFile(path.join(logDir, 'snaplog-benchmark.log'), '', { flag: 'w' });
+    await fs.promises.writeFile(path.join(logDir, 'winston-benchmark.log'), '', { flag: 'w' });
+  } catch (error) {
+    console.error('Error clearing log files:', error);
+  }
+}
 
 async function collectGarbage() {
   if (global.gc) {
@@ -49,6 +58,9 @@ async function collectGarbage() {
 
 async function benchmark(logger, loggerName) {
   console.log(`\nPreparing benchmark for ${loggerName}...`);
+
+  // Clear log files
+  await clearLogFiles();
 
   // Force garbage collection
   await collectGarbage();
