@@ -20,12 +20,12 @@ class LogGenerator {
     const level = this.randomSelect(this.logLevels)
 
     return {
-      timestamp: new Date().toISOString(),
-      service: service,
       level: level,
       message: this.randomSelect(this.messages[level]),
-      traceId: uuidv4(),
       metadata: {
+        timestamp: new Date().toISOString(),
+        service: service,
+        traceId: uuidv4(),
         host: this.randomSelect(this.hosts),
         pid: Math.floor(Math.random() * 9999),
         ip: this.generateIP(),
