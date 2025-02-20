@@ -57,8 +57,14 @@ class LogGenerator {
 
 const generator = new LogGenerator()
 
-generator.generateLogFile(10000, "small_logs.json")
-generator.generateLogFile(100000, "medium_logs.json")
-generator.generateLogFile(1000000, "large_logs.json")
+generator.generateLogFile(100, "100_logs.json")
+generator.generateLogFile(500, "500_logs.json")
+generator.generateLogFile(1000, "1000_logs.json")
+generator.generateLogFile(5000, "5000_logs.json")
+generator.generateLogFile(10000, "10000_logs.json")
+generator.generateLogFile(50000, "50000_logs.json")
+generator.generateLogFile(100000, "100000_logs.json")
+generator.generateLogFile(500000, "500000_logs.json")
+generator.generateLogFile(1000000, "1000000_logs.json")
 
 export default LogGenerator;
