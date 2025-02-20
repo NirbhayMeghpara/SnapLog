@@ -12,8 +12,10 @@ const createLogger = (options = {}) => {
   };
 
   const log = (level, message, meta = {}) => {
-    const info = normalizeInput(message, meta);
-    info.level = level;
+    const info = typeof message === 'object' 
+      ? message 
+      : { message, ...meta, level };
+
     return processLog(info, state);
   };
 
@@ -40,26 +42,21 @@ const createLogger = (options = {}) => {
     // aho corasick algorithm
   };
 
-  const normalizeInput = (message, meta = {}) => {
-    if (typeof message === 'object') {
-      return { ...message };
-    }
-    return {
-      message,
-      ...meta
-    };
-  };
-
   const processLog = (info, state) => {
-    const processedInfo = Array.from(state.processors.values())
-      .reduce((acc, processor) => processor(acc), info);
+    for (const processor of state.processors) {
+      processor(info);
+    }
 
-    const shouldLog = Array.from(state.filters.values())
-      .every(filter => filter(processedInfo));
+    for (const filter of state.filters) {
+      if (!filter(info)) return false;
+    }
 
-    if (!shouldLog) return false;
+    const sortedInfo = {};
+    Object.keys(info).sort().forEach(key => {
+      sortedInfo[key] = info[key];
+    });
 
-    state.transport.log(processedInfo);
+    state.transport.log(sortedInfo);
     return true;
   };
 
