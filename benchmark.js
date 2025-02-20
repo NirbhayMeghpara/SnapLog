@@ -29,14 +29,16 @@ const snapLog = createLogger({
   },
 });
 
+// Create write stream for Winston
+const winstonStream = fs.createWriteStream(
+  path.join(logDir, "winston-benchmark.log"),
+  { flags: 'w' }
+);
+
 const winstonLogger = winston.createLogger({
   level: "debug",
   format: winston.format.json(),
-  transports: [
-    new winston.transports.File({
-      filename: path.join(logDir, "winston-benchmark.log"),
-    }),
-  ],
+  transports: [new winston.transports.Stream({ stream: winstonStream })]
 });
 
 async function clearLogFiles() {
@@ -148,11 +150,11 @@ async function runBenchmarks() {
   console.log(`Test data: ${logs.length} log entries`);
 
   try {
-    const winstonResults = await benchmark(winstonLogger, "Winston");
-    console.log("Winston Results:", formatResults(winstonResults));
-
     const snapLogResults = await benchmark(snapLog, "SnapLog");
     console.log("SnapLog Results:", formatResults(snapLogResults));
+
+    const winstonResults = await benchmark(winstonLogger, "Winston");
+    console.log("Winston Results:", formatResults(winstonResults));
 
     compareResults(snapLogResults, winstonResults);
   } catch (error) {
