@@ -8,7 +8,8 @@ const createLogger = (options = {}) => {
     levels: options.levels || LOG_LEVELS,
     transport: createFileTransport(options.fileOptions || {}),
     processors: new Map(),
-    filters: new Map()
+    filters: new Map(),
+    patternCache: new Map()
   };
 
   const log = (level, message, meta = {}) => {
@@ -34,8 +35,63 @@ const createLogger = (options = {}) => {
     return logger;
   };
 
-  const findPattern = (pattern, logs) => {
-    // kmp algorithm
+  const computeLPSArray = (pattern) => {
+    const lps = new Array(pattern.length).fill(0);
+    let len = 0;
+    let i = 1;
+    while (i < pattern.length) {
+      if (pattern[i] === pattern[len]) {
+        len++;
+        lps[i] = len;
+        i++;
+      } else if (len !== 0) {
+        len = lps[len - 1];
+      } else {
+        lps[i] = 0;
+        i++;
+      }
+    }
+    return lps;
+  };
+
+  const findPattern = (pattern, text) => {
+    if (!pattern || !text) return false;
+    const m = pattern.length;
+    const n = text.length;
+    if (m > n) return false;
+
+    let lps = state.patternCache.get(pattern);
+    if (!lps) {
+      lps = computeLPSArray(pattern);
+      state.patternCache.set(pattern, lps);
+    }
+
+    let i = 0, j = 0;
+    while (i < n) {
+      if (pattern[j] === text[i]) {
+        i++;
+        j++;
+      }
+      if (j === m) return true;
+      else if (i < n && pattern[j] !== text[i]) {
+        j = j !== 0 ? lps[j - 1] : 0;
+        if (j === 0) i++;
+      }
+    }
+    return false;
+  };
+
+  const addPatternFilter = (name, pattern, allow = true) => {
+    state.filters.set(name, (info) => {
+      const found = findPattern(pattern, info.message);
+      return allow ? found : !found;
+    });
+    return logger;
+  };
+
+  const removeFilter = name => {
+    state.filters.delete(name);
+    return logger;
   };
 
   const findMultiplePatterns = (patterns, logs) => {
@@ -43,11 +99,11 @@ const createLogger = (options = {}) => {
   };
 
   const processLog = (info, state) => {
-    for (const processor of state.processors) {
+    for (const processor of state.processors.values()) {
       processor(info);
     }
 
-    for (const filter of state.filters) {
+    for (const filter of state.filters.values()) {
       if (!filter(info)) return false;
     }
 
@@ -60,11 +116,23 @@ const createLogger = (options = {}) => {
     return true;
   };
 
+  const setFile = (newOptions = {}) => {
+    const updatedOptions = {
+      filename: newOptions.filename || options.fileOptions.filename,
+      format: newOptions.format || options.fileOptions.format,
+      logDir: newOptions.logDir || options.fileOptions.logDir
+    };
+    state.transport.setFile(updatedOptions);
+  };
+
   const logger = {
     ...levelFunctions,
     log,
     addProcessor,
     removeProcessor,
+    addPatternFilter,
+    removeFilter,
+    setFile,
     findPattern,
     findMultiplePatterns
   };

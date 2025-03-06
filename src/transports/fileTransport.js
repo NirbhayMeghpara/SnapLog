@@ -8,14 +8,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const createFileTransport = (options = {}) => {
-  const { filename = 'app.log', format = 'json', logDir = path.join(__dirname, '../logs') } = options;
+  let { filename = 'app.log', format = 'json', logDir = path.join(__dirname, '../logs') } = options;
 
   if (!fs.existsSync(logDir)) {
     fs.mkdirSync(logDir, { recursive: true });
   }
 
-  const filePath = path.join(logDir, filename);
-  const writeStream = fs.createWriteStream(filePath, { flags: 'a' });
+  let filePath = path.join(logDir, filename);
+  let writeStream = fs.createWriteStream(filePath, { flags: 'a' });
 
   // Pre-compile format function based on type
   const formatLog = format === 'json'
@@ -31,7 +31,16 @@ export const createFileTransport = (options = {}) => {
       }
   };
 
+  const setFile = (newOptions) => {
+    writeStream.end();
+    filename = newOptions.filename || filename;
+    format = newOptions.format || format;
+    logDir = newOptions.logDir || logDir;
+    filePath = path.join(logDir, filename);
+    writeStream = fs.createWriteStream(filePath, { flags: 'a' });
+  };
+
   process.on('exit', () => writeStream.end());
 
-  return { log: write };
+  return { log: write, setFile };
 };

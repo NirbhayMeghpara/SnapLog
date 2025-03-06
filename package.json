@@ -4,7 +4,8 @@
   "main": "snaplog.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "generate-logs": "node src/logGenerator.js",
+    "benchmark": "node --expose-gc benchmark.js"
   },
   "keywords": [],
   "author": "",
