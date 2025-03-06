@@ -116,6 +116,15 @@ const createLogger = (options = {}) => {
     return true;
   };
 
+  const setFile = (newOptions = {}) => {
+    const updatedOptions = {
+      filename: newOptions.filename || options.fileOptions.filename,
+      format: newOptions.format || options.fileOptions.format,
+      logDir: newOptions.logDir || options.fileOptions.logDir
+    };
+    state.transport.setFile(updatedOptions);
+  };
+
   const logger = {
     ...levelFunctions,
     log,
@@ -123,6 +132,7 @@ const createLogger = (options = {}) => {
     removeProcessor,
     addPatternFilter,
     removeFilter,
+    setFile,
     findPattern,
     findMultiplePatterns
   };
