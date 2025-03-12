@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 
 let logs;
 try {
-  logs = JSON.parse(fs.readFileSync("./test/testData/1000000_logs.json", "utf8"));
+  logs = JSON.parse(fs.readFileSync("./benchmark/testData/10000_logs.json", "utf8"));
 } catch (error) {
   console.error(chalk.red("Error loading test data:"), error);
   process.exit(1);
