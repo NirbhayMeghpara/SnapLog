@@ -30,7 +30,7 @@ snaplog/
 │   │   └── fileTransport.js    # File output handling logic
 │   └── utils/
 │       └── constants.js        # Log level definitions and constants
-└── test/
+└── benchmark/
     ├── logs/                   # Directory for benchmark output files
     │   ├── snaplog-benchmark.log
     │   ├── snaplog-filtered.log
@@ -52,7 +52,7 @@ const logger = createLogger({
   fileOptions: {
     filename: 'demo.log',
     format: 'json',
-    logDir: './test/logs'
+    logDir: './benchmark/logs'
   }
 });
 
@@ -70,7 +70,7 @@ logger.log('error', 'Query failed');           // Filtered out
 
 **What's Happening?**
 
-1. `createLogger`: Initializes a logger that outputs JSON to test/logs/demo.log.
+1. `createLogger`: Initializes a logger that outputs JSON to benchmark/logs/demo.log.
 2. `logger.log`: Writes messages with specified levels (e.g., 'info', 'error').
 3. `addPatternFilter`: Applies KMP to filter out logs containing "failed".
 4. **Result**: demo.log contains only `{ "level": "info", "message": "Server started successfully" }` and `{ "level": "info", "message": "Database connected" }`.
@@ -110,18 +110,18 @@ Check that your folder contains these key files:
 - `src/utils/constants.js`: Log levels.
 - `benchmark.js`: Benchmark script comparing SnapLog and Winston.
 - `package.json`: Project metadata and scripts.
-- Optional: `src/logGenerator.js` and `test/testData/10000_logs.json` (if provided).
+- Optional: `src/logGenerator.js` and `benchmark/testData/10000_logs.json` (if provided).
 
 ### Step 4: Generate Test Logs (Optional)
 
-If `test/testData/10000_logs.json` isn't included, generate test data:
+If `benchmark/testData/10000_logs.json` isn't included, generate test data:
 
 ```bash
 npm run generate-logs
 ```
 
 - Requires `src/logGenerator.js` (if not present, see note below).
-- Creates `test/testData/10000_logs.json` with 10,000 log entries (mix of levels, some with "failed").
+- Creates `benchmark/testData/10000_logs.json` with 10,000 log entries (mix of levels, some with "failed").
 - **Note**: If `logGenerator.js` isn't provided, you'll need a sample JSON file with entries like `{ "level": "info", "message": "Test log", "metadata": {} }`. Contact me or create one manually.
 
 ### Step 5: Prepare the Logs Directory
@@ -129,10 +129,10 @@ npm run generate-logs
 Ensure the output directory exists:
 
 ```bash
-mkdir -p test/logs
+mkdir -p benchmark/logs
 ```
 
-- Creates `test/logs/` for benchmark output files (snaplog-benchmark.log, etc.).
+- Creates `benchmark/logs/` for benchmark output files (snaplog-benchmark.log, etc.).
 
 ### Step 6: Run the Benchmark
 
@@ -146,7 +146,7 @@ npm run benchmark
 - Performs two tests:
   - **Raw Logging**: Logs all entries without filtering.
   - **Filtered Logging**: Filters out logs with "failed".
-- Outputs results to the terminal and files in `test/logs/`.
+- Outputs results to the terminal and files in `benchmark/logs/`.
 
 ### Step 7: Analyze the Results
 
@@ -156,10 +156,10 @@ npm run benchmark
 - "Performance Comparison": SnapLog vs. Winston (SnapLog should be faster with KMP).
 
 **Log Files**:
-- `test/logs/snaplog-benchmark.log`: Raw logs.
-- `test/logs/winston-benchmark.log`: Raw logs.
-- `test/logs/snaplog-filtered.log`: Filtered logs.
-- `test/logs/winston-filtered.log`: Filtered logs.
+- `benchmark/logs/snaplog-benchmark.log`: Raw logs.
+- `benchmark/logs/winston-benchmark.log`: Raw logs.
+- `benchmark/logs/snaplog-filtered.log`: Filtered logs.
+- `benchmark/logs/winston-filtered.log`: Filtered logs.
 - Verify filtering: Check `*-filtered.log` files—no logs should contain "failed".
 
 ### Step 8: Test SnapLog Manually (Optional)
@@ -173,7 +173,7 @@ const logger = createLogger({
   fileOptions: { 
     filename: 'test.log', 
     format: 'json', 
-    logDir: './test/logs' 
+    logDir: './benchmark/logs' 
   } 
 });
 
@@ -189,7 +189,7 @@ Run it:
 node test.js
 ```
 
-Check `test/logs/test.log` and `test/logs/test2.log`.
+Check `benchmark/logs/test.log` and `benchmark/logs/test2.log`.
 
 ## Expected Outcome
 
@@ -200,7 +200,7 @@ Check `test/logs/test.log` and `test/logs/test2.log`.
 ## Troubleshooting
 
 - "Cannot find module": Rerun `npm install`.
-- No logs in `test/logs/`: Ensure `10000_logs.json` exists and is valid.
+- No logs in `benchmark/logs/`: Ensure `10000_logs.json` exists and is valid.
 - Benchmark fails: Check Node.js version; run `node --expose-gc benchmark.js` manually.
 
 ## Why SnapLog?

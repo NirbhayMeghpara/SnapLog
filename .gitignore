@@ -1,5 +1,5 @@
 node_modules
 
-test/testData/
+benchmark/testData/
 
-test/logs/
+benchmark/logs/
