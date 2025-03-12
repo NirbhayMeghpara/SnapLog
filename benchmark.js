@@ -17,7 +17,7 @@ try {
   process.exit(1);
 }
 
-const logDir = path.join(__dirname, "test", "logs");
+const logDir = path.join(__dirname, "benchmark", "logs");
 if (!fs.existsSync(logDir)) {
   fs.mkdirSync(logDir, { recursive: true });
 }
