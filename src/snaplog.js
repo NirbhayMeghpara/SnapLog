@@ -13,16 +13,13 @@ const createLogger = (options = {}) => {
   };
 
   const log = (level, message, meta = {}) => {
-    const info = typeof message === 'object' 
-      ? message 
-      : { message, ...meta, level };
-
+    const info = { message, ...meta, level: level.toLowerCase() };
     return processLog(info, state);
   };
 
   const levelFunctions = Object.keys(state.levels).reduce((acc, level) => ({
     ...acc,
-    [level]: (...args) => log(level, ...args)
+    [level.toLowerCase()]: (...args) => log(level, ...args)
   }), {});
 
   const addProcessor = (name, processorFn) => {
@@ -99,6 +96,8 @@ const createLogger = (options = {}) => {
   };
 
   const processLog = (info, state) => {
+    if (!info || typeof info !== 'object') return false;
+
     for (const processor of state.processors.values()) {
       processor(info);
     }
