@@ -15,7 +15,7 @@ const createLogger = (options = {}) => {
   };
 
   const log = (level, message, meta = {}) => {
-    const info = { message, ...meta, level };
+    const info = { message, ...meta, level: level.toLowerCase() };
     return processLog(info, state);
   };
 
