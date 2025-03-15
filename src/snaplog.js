@@ -15,7 +15,7 @@ const createLogger = (options = {}) => {
   };
 
   const log = (level, message, meta = {}) => {
-    const info = { message, ...meta, level: level.toLowerCase() };
+    const info = meta && Object.keys(meta).length > 0 ? { message, ...meta, level: level.toLowerCase() } : { message, level: level.toLowerCase() };
     return processLog(info, state);
   };
 
@@ -50,18 +50,22 @@ const createLogger = (options = {}) => {
   const processLog = (info, state) => {
     if (!info || typeof info !== 'object') return false;
 
-    for (const processor of state.processors.values()) {
-      processor(info);
+    if (state.processors.size > 0) {
+      for (const processor of state.processors.values()) {
+        processor(info);
+      }
     }
 
-    for (const filter of state.filters.values()) {
-      if (!filter(info)) return false;
+    if (state.filters.size > 0 && info.message && typeof info.message === 'string') {
+      for (const filter of state.filters.values()) {
+        if (!filter(info)) return false;
+      }
     }
 
-    const sortedInfo = {};
-    Object.keys(info).sort().forEach(key => {
-      sortedInfo[key] = info[key];
-    });
+    const sortedInfo = Object.keys(info).sort().reduce((acc, key) => {
+      acc[key] = info[key];
+      return acc;
+    }, {});
 
     state.transport.log(sortedInfo);
     return true;
