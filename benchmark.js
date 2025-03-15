@@ -291,6 +291,9 @@ async function runBenchmarks() {
     console.log(formatResults(winstonFiltering, "Winston", "Filtering"));
 
     compareResults(snapLogFiltering, winstonFiltering, "Filtering");
+
+    console.log(chalk.bold.blue("\n🏁 Benchmark Suite Complete"))
+
   } catch (error) {
     console.error(chalk.red("\nBenchmark suite failed:"), error);
   }
