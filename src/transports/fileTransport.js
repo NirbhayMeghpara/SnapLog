@@ -16,22 +16,38 @@ export const createFileTransport = (options = {}) => {
 
   let filePath = path.join(logDir, filename);
   let writeStream = fs.createWriteStream(filePath, { flags: 'a' });
+  let buffer = ''; // Buffer for batching log entries
 
-  // Pre-compile format function based on type
   const formatLog = format === 'json'
       ? (info) => JSON.stringify(info) + '\n'
-      : (info) => `${info.timestamp || new Date().toISOString()} [${info.level}] ${info.message}${info.meta ? ' ' + JSON.stringify(info.meta) : ''}\n`;
+      : (info) => `${info.timestamp || new Date().toISOString()} [${info.level}] ${info.message}${Object.keys(info.meta || {}).length ? ' ' + JSON.stringify(info.meta) : ''}\n`;
 
-  // Simple write function
   const write = (info) => {
-      try {
-          writeStream.write(formatLog(info));
-      } catch (error) {
-          console.error('Error writing log:', error);
+    try {
+      buffer += formatLog(info);
+      if (buffer.length >= 16384) { // Match default highWaterMark (16KB)
+        writeStream.write(buffer);
+        buffer = '';
       }
+    } catch (error) {
+      console.error('Error writing log:', error);
+    }
+  };
+
+  // Flush buffered logs
+  const flush = () => {
+    if (buffer.length > 0) {
+      try {
+        writeStream.write(buffer);
+        buffer = '';
+      } catch (error) {
+        console.error('Error flushing log buffer:', error);
+      }
+    }
   };
 
   const setFile = (newOptions) => {
+    flush(); // Write any buffered logs before switching
     writeStream.end();
     filename = newOptions.filename || filename;
     format = newOptions.format || format;
@@ -40,7 +56,10 @@ export const createFileTransport = (options = {}) => {
     writeStream = fs.createWriteStream(filePath, { flags: 'a' });
   };
 
-  process.on('exit', () => writeStream.end());
+  process.on('exit', () => {
+    flush(); // Ensure buffer is written on exit
+    writeStream.end();
+  });
 
-  return { log: write, setFile };
+  return { log: write, setFile, flush };
 };
