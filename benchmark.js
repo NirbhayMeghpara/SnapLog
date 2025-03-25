@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 
 let logs;
 try {
-  logs = JSON.parse(fs.readFileSync("./benchmark/testData/10000_logs.json", "utf8"));
+  logs = JSON.parse(fs.readFileSync("./benchmark/testData/100_logs.json", "utf8"));
 } catch (error) {
   console.error(chalk.red("Error loading test data:"), error);
   process.exit(1);
@@ -43,10 +43,14 @@ const winstonLogger = winston.createLogger({
 
 async function clearLogFiles() {
   try {
-    await fs.promises.writeFile(path.join(logDir, 'snaplog-benchmark.log'), '', { flag: 'w' });
-    await fs.promises.writeFile(path.join(logDir, 'winston-benchmark.log'), '', { flag: 'w' });
-    await fs.promises.writeFile(path.join(logDir, 'snaplog-filtered.log'), '', { flag: 'w' });
-    await fs.promises.writeFile(path.join(logDir, 'winston-filtered.log'), '', { flag: 'w' });
+    await Promise.all([
+      fs.promises.writeFile(path.join(logDir, 'snaplog-benchmark.log'), '', { flag: 'w' }),
+      fs.promises.writeFile(path.join(logDir, 'winston-benchmark.log'), '', { flag: 'w' }),
+      fs.promises.writeFile(path.join(logDir, 'snaplog-kmp-filtered.log'), '', { flag: 'w' }),
+      fs.promises.writeFile(path.join(logDir, 'snaplog-ac-filtered.log'), '', { flag: 'w' }),
+      fs.promises.writeFile(path.join(logDir, 'winston-kmp-filtered.log'), '', { flag: 'w' }),
+      fs.promises.writeFile(path.join(logDir, 'winston-ac-filtered.log'), '', { flag: 'w' })
+    ]);
   } catch (error) {
     console.error(chalk.red('Error clearing log files:'), error);
   }
@@ -55,20 +59,23 @@ async function clearLogFiles() {
 async function collectGarbage() {
   if (global.gc) {
     global.gc();
-    // Wait for GC to complete
+    // wait for GC to complete
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 }
 
-async function benchmarkLogging(logger, loggerName) {
+async function benchmarkLogging(logger, loggerName, fileName) {
   const spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
   let spinnerIdx = 0;
+
+  const baseMessage = `Running logging benchmark for ${chalk.blue(loggerName)}...`;
+  const messageLength = baseMessage.length + chalk.cyan(' ').length;
+
   const spinnerInterval = setInterval(() => {
-    process.stdout.write(`\r${chalk.cyan(spinner[spinnerIdx])} Running logging benchmark for ${chalk.blue(loggerName)}...`);
+    process.stdout.write(`\r${chalk.cyan(spinner[spinnerIdx])} ${baseMessage}`);
     spinnerIdx = (spinnerIdx + 1) % spinner.length;
   }, 80);
 
-  // Force garbage collection
   await collectGarbage();
 
   await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -77,13 +84,10 @@ async function benchmarkLogging(logger, loggerName) {
   const startCPU = process.cpuUsage();
   const startTime = performance.now();
 
-  let loggedCount = 0;
-
   try {
     for (const log of logs) {
       const normalizedLevel = loggerName === "Winston" ? log.level.toLowerCase() : log.level;
       logger.log(normalizedLevel, log.message, log.metadata);
-      loggedCount++;
     }
   } catch (error) {
     clearInterval(spinnerInterval);
@@ -92,17 +96,11 @@ async function benchmarkLogging(logger, loggerName) {
   }
 
   clearInterval(spinnerInterval);
-  process.stdout.write('\r' + ' '.repeat(50) + '\r'); // Clear spinner line
+  process.stdout.write('\r' + ' '.repeat(messageLength));
 
   const endTime = performance.now();
   const endMemory = process.memoryUsage();
   const endCPU = process.cpuUsage(startCPU);
-
-  const filePath = loggerName === "SnapLog" 
-    ? path.join(logDir, "snaplog-benchmark.log") 
-    : path.join(logDir, "winston-benchmark.log");
-  const fileContent = await fs.promises.readFile(filePath, 'utf8');
-  const logCount = fileContent.split('\n').filter(line => line.trim()).length;
 
   return {
     time: endTime - startTime,
@@ -114,9 +112,7 @@ async function benchmarkLogging(logger, loggerName) {
       system: endCPU.system / 1000,
       total: (endCPU.user + endCPU.system) / 1000,
     },
-    operationsPerSecond: logs.length / ((endTime - startTime) / 1000),
-    loggedCount,
-    fileLogCount: logCount
+    operationsPerSecond: logs.length / ((endTime - startTime) / 1000)
   };
 }
 
@@ -131,8 +127,6 @@ ${header}
 ${separator}
 ${chalk.yellow("Time taken")}: ${chalk.cyan(results.time.toFixed(2))} ms
 ${chalk.yellow("Operations/second")}: ${chalk.cyan(Math.round(results.operationsPerSecond).toLocaleString())} ops/sec
-${chalk.yellow("Logs Attempted")}: ${chalk.cyan(results.loggedCount.toLocaleString())}
-${chalk.yellow("Logs Written")}: ${chalk.cyan(results.fileLogCount.toLocaleString())}
 
 ${chalk.bold("Memory Usage")}:
 ${chalk.yellow("Heap")}: ${chalk.cyan(results.memory.heapUsed.toFixed(2))} MB
@@ -185,11 +179,14 @@ ${formatComparison(cpuPerformance, "CPU", 'resource')}
 `);
 }
 
-async function benchmarkFiltering(logger, loggerName) {
+async function benchmarkFiltering(logger, loggerName, filterType, fileName) {
   const spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
   let spinnerIdx = 0;
+  const baseMessage = `Running ${filterType} filtering benchmark for ${chalk.blue(loggerName)}...`;
+  const messageLength = baseMessage.length + chalk.cyan(' ').length;
+
   const spinnerInterval = setInterval(() => {
-    process.stdout.write(`\r${chalk.cyan(spinner[spinnerIdx])} Running filtering benchmark for ${chalk.blue(loggerName)}...`);
+    process.stdout.write(`\r${chalk.cyan(spinner[spinnerIdx])} ${baseMessage}`);
     spinnerIdx = (spinnerIdx + 1) % spinner.length;
   }, 80);
 
@@ -201,32 +198,23 @@ async function benchmarkFiltering(logger, loggerName) {
   const startCPU = process.cpuUsage();
   const startTime = performance.now();
 
-  let loggedCount = 0;
-  const filePath = loggerName === "SnapLog" 
-    ? path.join(logDir, "snaplog-filtered.log") 
-    : path.join(logDir, "winston-filtered.log");
-
   try {
     for (const log of logs) {
       const normalizedLevel = loggerName === "Winston" ? log.level.toLowerCase() : log.level;
       logger.log(normalizedLevel, log.message, log.metadata);
-      loggedCount++;
     }
   } catch (error) {
     clearInterval(spinnerInterval);
-    console.error(chalk.red(`\nError during ${loggerName} filtering benchmark:`), error);
+    console.error(chalk.red(`\nError during ${loggerName} ${filterType} filtering benchmark:`), error);
     return null;
   }
 
   clearInterval(spinnerInterval);
-  process.stdout.write('\r' + ' '.repeat(50) + '\r');
+  process.stdout.write('\r' + ' '.repeat(messageLength));
 
   const endTime = performance.now();
   const endMemory = process.memoryUsage();
   const endCPU = process.cpuUsage(startCPU);
-
-  const fileContent = await fs.promises.readFile(filePath, 'utf8');
-  const logCount = fileContent.split('\n').filter(line => line.trim()).length;
 
   return {
     time: endTime - startTime,
@@ -238,9 +226,7 @@ async function benchmarkFiltering(logger, loggerName) {
       system: endCPU.system / 1000,
       total: (endCPU.user + endCPU.system) / 1000,
     },
-    operationsPerSecond: logs.length / ((endTime - startTime) / 1000),
-    loggedCount,
-    fileLogCount: logCount
+    operationsPerSecond: logs.length / ((endTime - startTime) / 1000)
   };
 }
 
@@ -252,48 +238,72 @@ async function runBenchmarks() {
   try {
     await clearLogFiles();
 
-    // Logging Benchmark (with filtering)
-    console.log(chalk.bold.yellow("\nLogging Benchmark (with Filtering)"));
-    const snapLogLogging = await benchmarkLogging(snapLog, "SnapLog");
+    // Logging Benchmark (No Filtering)
+    console.log(chalk.bold.yellow("\nLogging Benchmark (No Filtering)"));
+    const snapLogLogging = await benchmarkLogging(snapLog, "SnapLog", "snaplog-benchmark.log");
     console.log(formatResults(snapLogLogging, "SnapLog", "Logging"));
 
-    const winstonLogging = await benchmarkLogging(winstonLogger, "Winston");
+    const winstonLogging = await benchmarkLogging(winstonLogger, "Winston", "winston-benchmark.log");
     console.log(formatResults(winstonLogging, "Winston", "Logging"));
 
     compareResults(snapLogLogging, winstonLogging, "Logging");
 
-    // Setup for filtering benchmark - create new loggers with filters
-    snapLog.setFile({ filename: "snaplog-filtered.log" });
-    snapLog.addPatternFilter('no-failures', 'failed', false);
+    // KMP Filtering Benchmark
+    console.log(chalk.bold.yellow("\nKMP Filtering Benchmark"));
+    snapLog.setFile({ filename: "snaplog-kmp-filtered.log" });
+    snapLog.addPatternFilter('no-errors', 'error', false);
 
-    // Clear winston transports and create a new one with filtering
+    const snapLogKMPFiltering = await benchmarkFiltering(snapLog, "SnapLog", "KMP", "snaplog-kmp-filtered.log");
+    console.log(formatResults(snapLogKMPFiltering, "SnapLog", "KMP Filtering"));
+    snapLog.removeFilter('no-errors');
+
+    // Clear winston transports and create a new one with filtering    
     winstonLogger.clear();
     winstonStream = fs.createWriteStream(
-      path.join(logDir, "winston-filtered.log"),
-      { flags: 'w' }
+      path.join(logDir, "winston-kmp-filtered.log"), { flags: 'w' }
     );
     winstonLogger.add(
       new winston.transports.Stream({
         stream: winstonStream,
         format: winston.format.combine(
-          winston.format((info) => info.message.includes('failed') ? false : info)(),
+          winston.format((info) => info.message.includes('error') ? false : info)(),
           winston.format.json()
         )
       })
     );
+    const winstonKMPFiltering = await benchmarkFiltering(winstonLogger, "Winston", "KMP", "winston-kmp-filtered.log");
+    console.log(formatResults(winstonKMPFiltering, "Winston", "KMP Filtering"));
 
-    // Filtering Benchmark with separate file output
-    console.log(chalk.bold.yellow("\nFiltering Benchmark"));
-    const snapLogFiltering = await benchmarkFiltering(snapLog, "SnapLog");
-    console.log(formatResults(snapLogFiltering, "SnapLog", "Filtering"));
+    compareResults(snapLogKMPFiltering, winstonKMPFiltering, "KMP Filtering");
 
-    const winstonFiltering = await benchmarkFiltering(winstonLogger, "Winston");
-    console.log(formatResults(winstonFiltering, "Winston", "Filtering"));
+    // Aho-Corasick Filtering Benchmark
+    console.log(chalk.bold.yellow("\nAho-Corasick Filtering Benchmark"));
+    snapLog.setFile({ filename: "snaplog-ac-filtered.log" });
+    snapLog.addMultiPatternFilter('multi-errors', ['timeout', 'error', 'failed'], true);
+    const snapLogACFiltering = await benchmarkFiltering(snapLog, "SnapLog", "Aho-Corasick", "snaplog-ac-filtered.log");
+    console.log(formatResults(snapLogACFiltering, "SnapLog", "Aho-Corasick Filtering"));
+    snapLog.removeFilter('multi-errors');
 
-    compareResults(snapLogFiltering, winstonFiltering, "Filtering");
+    winstonLogger.clear();
+    winstonStream = fs.createWriteStream(path.join(logDir, "winston-ac-filtered.log"), { flags: 'w' });
+    winstonLogger.add(
+      new winston.transports.Stream({
+        stream: winstonStream,
+        format: winston.format.combine(
+          winston.format((info) => {
+            const msg = info.message;
+            return msg.includes('timeout') || msg.includes('error') || msg.includes('failed') ? info : false;
+          })(),
+          winston.format.json()
+        )
+      })
+    );
+    const winstonACFiltering = await benchmarkFiltering(winstonLogger, "Winston", "Aho-Corasick", "winston-ac-filtered.log");
+    console.log(formatResults(winstonACFiltering, "Winston", "Aho-Corasick Filtering"));
 
-    console.log(chalk.bold.blue("\n🏁 Benchmark Suite Complete"))
+    compareResults(snapLogACFiltering, winstonACFiltering, "Aho-Corasick Filtering");
 
+    console.log(chalk.bold.blue("\n🏁 Benchmark Suite Complete"));
   } catch (error) {
     console.error(chalk.red("\nBenchmark suite failed:"), error);
   }
