@@ -3,7 +3,7 @@
 import { LOG_LEVELS } from './utils/constants.js';
 import { createFileTransport } from './transports/fileTransport.js';
 import { findPattern } from './algorithms/kmp.js';
-import { findMultiplePatterns } from './algorithms/ahoCorasick.js';
+import { createTrie, addPatternToTrie, buildFailureLinks, findMultiplePatterns } from './algorithms/ahoCorasick.js';
 
 const createLogger = (options = {}) => {
   const state = {
@@ -11,7 +11,8 @@ const createLogger = (options = {}) => {
     transport: createFileTransport(options.fileOptions || {}),
     processors: new Map(),
     filters: new Map(),
-    patternCache: new Map()
+    patternCache: new Map(),
+    acTrie: createTrie() // Initialize aho corasick trie
   };
 
   const log = (level, message, meta = {}) => {
@@ -37,6 +38,19 @@ const createLogger = (options = {}) => {
   const addPatternFilter = (name, pattern, allow = true) => {
     state.filters.set(name, (info) => {
       const found = findPattern(pattern, info.message, state.patternCache);
+      return allow ? found : !found;
+    });
+    return logger;
+  };
+
+  const addMultiPatternFilter = (name, patterns, allow = true) => {
+    let updatedTrie = state.acTrie;
+    patterns.forEach(pattern => {
+      updatedTrie = addPatternToTrie(updatedTrie, pattern);
+    });
+    state.acTrie = buildFailureLinks(updatedTrie);
+    state.filters.set(name, (info) => {
+      const found = findMultiplePatterns(patterns, info.message, state.acTrie);
       return allow ? found : !found;
     });
     return logger;
@@ -86,10 +100,11 @@ const createLogger = (options = {}) => {
     addProcessor,
     removeProcessor,
     addPatternFilter,
+    addMultiPatternFilter,
     removeFilter,
     setFile,
     findPattern: (pattern, text) => findPattern(pattern, text, state.patternCache),
-    findMultiplePatterns
+    findMultiplePatterns: (patterns, text) => findMultiplePatterns(patterns, text, state.acTrie)
   };
 
   return logger;
