@@ -211,4 +211,71 @@ describe('SnapLog Unit Tests', () => {
     emptyLogger.log('info', 'Default log');
     expect(mockTransport.log).toHaveBeenCalled();
   });
+
+  // 16. Aho-Corasick Filter (Allow Patterns)
+  test('addMultiPatternFilter allows logs with any pattern when allow=true', () => {
+    logger.addMultiPatternFilter('multi-errors', ['Error', 'Timeout', 'failed'], true);
+    logger.log('info', 'Success message'); // Filtered out
+    logger.log('error', 'Error occurred'); // Allowed
+    logger.log('warn', 'Timeout happened'); // Allowed
+    logger.log('info', 'Task failed'); // Allowed
+    expect(mockTransport.log).toHaveBeenCalledTimes(3);
+    expect(mockTransport.log).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Error occurred' })
+    );
+    expect(mockTransport.log).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Timeout happened' })
+    );
+    expect(mockTransport.log).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Task failed' })
+    );
+    expect(mockTransport.log).not.toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Success message' })
+    );
+  });
+
+  // 17. Aho-Corasick Filter (Exclude Patterns)
+  test('addMultiPatternFilter excludes logs with any pattern when allow=false', () => {
+    logger.addMultiPatternFilter('no-errors', ['Error', 'Timeout', 'failed'], false);
+    logger.log('info', 'Success message'); // Allowed
+    logger.log('error', 'Error occurred'); // Filtered out
+    logger.log('warn', 'Timeout happened'); // Filtered out
+    logger.log('info', 'Task failed'); // Filtered out
+    expect(mockTransport.log).toHaveBeenCalledTimes(1);
+    expect(mockTransport.log).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Success message' })
+    );
+    expect(mockTransport.log).not.toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Error occurred' })
+    );
+  });
+
+  // 18. Aho-Corasick with Multiple Filters
+  test('multiple Aho-Corasick filters apply correctly', () => {
+    logger.addMultiPatternFilter('only-errors', ['Error', 'failed'], true);
+    logger.addMultiPatternFilter('no-timeouts', ['Timeout'], false);
+    logger.log('info', 'Success message'); // Filtered out (no error/failed)
+    logger.log('error', 'Error occurred'); // Allowed (has error, no timeout)
+    logger.log('warn', 'Timeout happened'); // Filtered out (has timeout)
+    logger.log('info', 'Task failed'); // Allowed (has failed, no timeout)
+    expect(mockTransport.log).toHaveBeenCalledTimes(2);
+    expect(mockTransport.log).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Error occurred' })
+    );
+    expect(mockTransport.log).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Task failed' })
+    );
+  });
+
+  // 19. Aho-Corasick Filter Removal
+  test('removeFilter disables Aho-Corasick filtering', () => {
+    logger.addMultiPatternFilter('no-errors', ['Error', 'Timeout'], false);
+    logger.log('error', 'Error message'); // Filtered out
+    logger.removeFilter('no-errors');
+    logger.log('error', 'Error message'); // Now allowed
+    expect(mockTransport.log).toHaveBeenCalledTimes(1);
+    expect(mockTransport.log).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Error message' })
+    );
+  });
 });
