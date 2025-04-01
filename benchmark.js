@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 
 let logs;
 try {
-  logs = JSON.parse(fs.readFileSync("./benchmark/testData/100_logs.json", "utf8"));
+  logs = JSON.parse(fs.readFileSync("./benchmark/testData/500000_logs.json", "utf8"));
 } catch (error) {
   console.error(chalk.red("Error loading test data:"), error);
   process.exit(1);
@@ -83,11 +83,18 @@ async function benchmarkLogging(logger, loggerName, fileName) {
   const startMemory = process.memoryUsage();
   const startCPU = process.cpuUsage();
   const startTime = performance.now();
+  let peakHeapUsed = startMemory.heapUsed;
+  const sampleInterval = Math.max(1, Math.floor(logs.length / 10)); // Sample every 10%
 
   try {
-    for (const log of logs) {
+    for (let i = 0; i < logs.length; i++) {
+      const log = logs[i];
       const normalizedLevel = loggerName === "Winston" ? log.level.toLowerCase() : log.level;
       logger.log(normalizedLevel, log.message, log.metadata);
+
+      if (i % sampleInterval === 0) {
+        peakHeapUsed = Math.max(peakHeapUsed, process.memoryUsage().heapUsed);
+      }
     }
   } catch (error) {
     clearInterval(spinnerInterval);
@@ -95,17 +102,16 @@ async function benchmarkLogging(logger, loggerName, fileName) {
     return null;
   }
 
+  const endTime = performance.now();
+  const endCPU = process.cpuUsage(startCPU);
+
   clearInterval(spinnerInterval);
   process.stdout.write('\r' + ' '.repeat(messageLength));
 
-  const endTime = performance.now();
-  const endMemory = process.memoryUsage();
-  const endCPU = process.cpuUsage(startCPU);
-
   return {
     time: endTime - startTime,
-    memory: {
-      heapUsed: (endMemory.heapUsed - startMemory.heapUsed) / (1024 * 1024),
+    memory: { 
+      heapUsed: parseFloat((peakHeapUsed - startMemory.heapUsed) / (1024 * 1024).toFixed(2))  // Peak memory used
     },
     cpu: {
       user: endCPU.user / 1000,
@@ -197,11 +203,18 @@ async function benchmarkFiltering(logger, loggerName, filterType, fileName) {
   const startMemory = process.memoryUsage();
   const startCPU = process.cpuUsage();
   const startTime = performance.now();
+  let peakHeapUsed = startMemory.heapUsed;
+  const sampleInterval = Math.max(1, Math.floor(logs.length / 10)); // Sample every 10%
 
   try {
-    for (const log of logs) {
+    for (let i = 0; i < logs.length; i++) {
+      const log = logs[i];
       const normalizedLevel = loggerName === "Winston" ? log.level.toLowerCase() : log.level;
       logger.log(normalizedLevel, log.message, log.metadata);
+
+      if (i % sampleInterval === 0) {
+        peakHeapUsed = Math.max(peakHeapUsed, process.memoryUsage().heapUsed);
+      }
     }
   } catch (error) {
     clearInterval(spinnerInterval);
@@ -209,17 +222,16 @@ async function benchmarkFiltering(logger, loggerName, filterType, fileName) {
     return null;
   }
 
+  const endTime = performance.now();
+  const endCPU = process.cpuUsage(startCPU);
+  
   clearInterval(spinnerInterval);
   process.stdout.write('\r' + ' '.repeat(messageLength));
 
-  const endTime = performance.now();
-  const endMemory = process.memoryUsage();
-  const endCPU = process.cpuUsage(startCPU);
-
   return {
     time: endTime - startTime,
-    memory: {
-      heapUsed: (endMemory.heapUsed - startMemory.heapUsed) / (1024 * 1024),
+    memory: { 
+      heapUsed: parseFloat((peakHeapUsed - startMemory.heapUsed) / (1024 * 1024).toFixed(2))  // Peak memory used
     },
     cpu: {
       user: endCPU.user / 1000,
