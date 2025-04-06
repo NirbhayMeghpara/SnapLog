@@ -1,7 +1,7 @@
 'use strict';
 
 const computeLPSArray = (pattern) => {
-  const lps = new Array(pattern.length).fill(0);
+  const lps = Array.from({ length: pattern.length }, () => 0);
   let len = 0;
   let i = 1;
   while (i < pattern.length) {
@@ -21,11 +21,11 @@ const computeLPSArray = (pattern) => {
 
 const findPattern = (pattern, text, patternCache) => {
   if (!pattern || !text) return false;
+  let lps = patternCache.get(pattern);
   const m = pattern.length;
   const n = text.length;
   if (m > n) return false;
 
-  let lps = patternCache.get(pattern);
   if (!lps) {
     lps = computeLPSArray(pattern);
     patternCache.set(pattern, lps);
@@ -38,7 +38,7 @@ const findPattern = (pattern, text, patternCache) => {
       j++;
     }
     if (j === m) return true;
-    else if (i < n && pattern[j] !== text[i]) {
+    else if (pattern[j] !== text[i]) {
       j = j !== 0 ? lps[j - 1] : 0;
       if (j === 0) i++;
     }
