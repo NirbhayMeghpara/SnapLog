@@ -150,36 +150,36 @@ function compareResults(snapLogResults, winstonResults, type = "Logging") {
     return;
   }
 
-  const timePerformance = ((winstonResults.time - snapLogResults.time) / winstonResults.time) * 100;
-  const opsPerformance = ((snapLogResults.operationsPerSecond - winstonResults.operationsPerSecond) / winstonResults.operationsPerSecond) * 100;
+  // Calculate "times faster" for time
+  const timeMultiplier = winstonResults.time / snapLogResults.time;
+  const opsMultiplier = snapLogResults.operationsPerSecond / winstonResults.operationsPerSecond;
   const memoryPerformance = ((winstonResults.memory.heapUsed - snapLogResults.memory.heapUsed) / winstonResults.memory.heapUsed) * 100;
   const cpuPerformance = ((winstonResults.cpu.total - snapLogResults.cpu.total) / winstonResults.cpu.total) * 100;
 
-  const formatComparison = (value, label, perfType = 'performance') => {
+  const formatComparison = (value, label, metricType) => {
     const absValue = Math.abs(value).toFixed(2);
     const isPositive = value > 0;
     const arrow = isPositive ? "↑" : "↓";
-    let message;
-    switch (perfType) {
-      case 'time':
-        message = `${chalk.yellow(label)}: SnapLog is ${isPositive ? chalk.green(`${absValue}% ${arrow} faster`) : chalk.red(`${absValue}% ${arrow} slower`)}`;
-        break;
-      case 'ops':
-        message = `${chalk.yellow(label)}: SnapLog performs ${isPositive ? chalk.green(`${absValue}% ${arrow} more`) : chalk.red(`${absValue}% ${arrow} fewer`)} operations per second`;
-        break;
-      case 'resource':
-        message = `${chalk.yellow(label)}: SnapLog uses ${isPositive ? chalk.green(`${absValue}% less`) : chalk.red(`${absValue}% ${arrow} more`)}`;
-        break;
+
+    if (metricType === 'time') {
+      // "Times faster" for time
+      const timesValue = timeMultiplier.toFixed(2);
+      return `${chalk.yellow(label)}: SnapLog is ${isPositive ? chalk.green(`${timesValue}x ${arrow} faster`) : chalk.red(`${timesValue}x ${arrow} slower`)} than Winston`;
+    } else if (metricType === 'ops') {
+      // "Times more" for operations per second
+      const timesValue = opsMultiplier.toFixed(2);
+      return `${chalk.yellow(label)}: SnapLog performs ${isPositive ? chalk.green(`${timesValue}x ${arrow} more`) : chalk.red(`${timesValue}x ${arrow} fewer`)} operations per second than Winston`;
+    } else {
+      // Percentage for memory and CPU
+      return `${chalk.yellow(label)}: SnapLog uses ${isPositive ? chalk.green(`${absValue}% less`) : chalk.red(`${absValue}% ${arrow} more`)} than Winston`;
     }
-    
-    return message;
   };
 
   console.log(`
 ${chalk.bold.blue(`${type} Performance Comparison`)}
 ${chalk.gray("─".repeat(40))}
-${formatComparison(timePerformance, "Time", 'time')}
-${formatComparison(opsPerformance, "Operations", 'ops')}
+${formatComparison(timeMultiplier, "Time", 'time')}
+${formatComparison(opsMultiplier, "Operations", 'ops')}
 ${formatComparison(memoryPerformance, "Memory", 'resource')}
 ${formatComparison(cpuPerformance, "CPU", 'resource')}
 `);
