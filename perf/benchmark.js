@@ -1,4 +1,4 @@
-import { createLogger } from "./src/snaplog.js";
+import { createLogger } from "../src/snaplog.js";
 import winston from "winston";
 import { performance } from "perf_hooks";
 import fs from "fs";
