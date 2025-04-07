@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
-import { SERVICES, LOG_LEVELS, LOG_MESSAGES, HOSTS, LOG_LEVELS_NAME } from "./utils/constants.js";
+import { SERVICES, LOG_LEVELS, LOG_MESSAGES, HOSTS, LOG_LEVELS_NAME } from "../src/utils/constants.js";
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
