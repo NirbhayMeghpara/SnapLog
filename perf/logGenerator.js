@@ -42,7 +42,7 @@ class LogGenerator {
   }
 
   generateLogFile(numberOfLogs, filename) {
-    const testDataDir = path.join(__dirname, "../benchmark/testData")
+    const testDataDir = path.join(__dirname, "../perf/testData")
     if (!fs.existsSync(testDataDir)) {
       fs.mkdirSync(testDataDir, { recursive: true })
     }
@@ -51,7 +51,7 @@ class LogGenerator {
     const logs = Array.from({ length: numberOfLogs }, () => this.generateLogEntry())
 
     fs.writeFileSync(filePath, JSON.stringify(logs, null, 2))
-    console.log(`Generated ${numberOfLogs} logs in benchmark/testData/${filename}`)
+    console.log(`Generated ${numberOfLogs} logs in perf/testData/${filename}`)
   }
 }
 
