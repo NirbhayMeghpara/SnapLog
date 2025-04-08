@@ -1,10 +1,21 @@
 'use strict';
 
+/**
+ * Creates an Aho-Corasick trie structure for multi-pattern matching.
+ * @returns {Object} Trie object with root node and pattern list.
+ */
 const createTrie = () => ({
   root: { children: {}, fail: null, outputs: [] },
   patterns: []
 });
 
+/**
+ * Adds a pattern to the Aho-Corasick trie.
+ * @param {Object} trie - Existing trie object.
+ * @param {string} pattern - Pattern to add.
+ * @param {Set<string>} [patternSet=null] - Optional set of patterns to filter outputs.
+ * @returns {Object} Updated trie object.
+ */
 const addPatternToTrie = (trie, pattern, patternSet = null) => {
   let node = trie.root;
   for (const char of pattern) {
@@ -16,6 +27,11 @@ const addPatternToTrie = (trie, pattern, patternSet = null) => {
   return trie;
 };
 
+/**
+ * Builds failure links in the Aho-Corasick trie for efficient matching.
+ * @param {Object} trie - Trie object to process.
+ * @returns {Object} Trie with failure links constructed.
+ */
 const buildFailureLinks = (trie) => {
   trie.root.fail = trie.root;
   const queue = [];
@@ -39,6 +55,13 @@ const buildFailureLinks = (trie) => {
   return trie;
 };
 
+/**
+ * Searches for multiple patterns in a text using the Aho-Corasick trie.
+ * @param {string[]} patterns - Array of patterns to search for.
+ * @param {string} text - Text to search in.
+ * @param {Object} trie - Pre-built Aho-Corasick trie.
+ * @returns {boolean} True if any pattern is found, false otherwise.
+ */
 const findMultiplePatterns = (patterns, text, trie) => {
   if (!patterns || !text || !trie) return false;
   const patternSet = new Set(patterns);
