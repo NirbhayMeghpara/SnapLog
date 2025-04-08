@@ -1,5 +1,5 @@
 {
-  "name": "snaplog",
+  "name": "snap-log",
   "version": "1.0.0",
   "description": "A high-performance logging library with advanced filtering algorithms",
   "main": "src/snaplog.js",
@@ -13,6 +13,14 @@
   "keywords": ["logging", "performance", "kmp", "aho-corasick", "nodejs"],
   "author": "Nirbhay Meghpara",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NirbhayMeghpara/SnapLog.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NirbhayMeghpara/SnapLog/issues"
+  },
+  "homepage": "https://github.com/NirbhayMeghpara/SnapLog#readme",
   "dependencies": {
     "uuid": "^11.0.5"
   },
