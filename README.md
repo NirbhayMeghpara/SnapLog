@@ -1,215 +1,201 @@
 # SnapLog
 
-A high-performance logging library for Node.js applications optimized for speed, filtering, and real-time processing at scale.
+A high-performance logging library for Node.js with advanced pattern-matching filters.
 
-## Overview
+## Motivation
 
-SnapLog is designed to handle large-scale, real-time log processing with advanced pattern-matching capabilities. It leverages optimized algorithms like Knuth-Morris-Pratt (KMP) for single-pattern matching to offer dramatically faster and more efficient log management compared to traditional tools.
+SnapLog is built for speed and precision in logging, targeting applications that demand real-time, high-volume log processing. It uses optimized **Knuth-Morris-Pratt (KMP)** for single-pattern filtering and **Aho-Corasick** for multi-pattern filtering, offering a lightweight alternative to traditional loggers like Winston. With a focus on performance and flexibility, SnapLog supports file-based logging with customizable filters and processors, making it extensible for diverse use cases.
 
-## Purpose
+## Quick Start
 
-This README guides you through testing SnapLog to evaluate its performance and filtering capabilities. You'll clone the repository, set up the environment, generate test data, and run benchmarks to compare SnapLog against Winston.
+Install SnapLog and start logging with a simple setup:
 
-## Prerequisites
-
-- **Node.js**: v16.x or higher (v18.x recommended)
-- **npm**: For installing dependencies
-
-## Project Structure
-
+```bash
+npm install snaplog
 ```
-snaplog/
-├── README.md
-├── package.json
-├── package-lock.json
-├── benchmark.js
-├── src/
-│   ├── snaplog.js              # Core logger implementation with KMP filtering
-│   ├── logGenerator.js         # Test log data generator
-│   ├── transports/
-│   │   └── fileTransport.js    # File output handling logic
-│   └── utils/
-│       └── constants.js        # Log level definitions and constants
-└── benchmark/
-    ├── logs/                   # Directory for benchmark output files
-    │   ├── snaplog-benchmark.log
-    │   ├── snaplog-filtered.log
-    │   ├── winston-benchmark.log
-    │   └── winston-filtered.log
-    └── testData/
-        └── 10000_logs.json     # Sample log entries for benchmarking
-```
-
-## Quick Demo: How SnapLog Works
-
-Here's a small, error-free example to demonstrate SnapLog's logging and KMP-based filtering:
 
 ```javascript
-const { createLogger } = require('./src/snaplog');
+import { createLogger } from 'snaplog';
 
-// Create a logger writing to 'demo.log'
 const logger = createLogger({
   fileOptions: {
-    filename: 'demo.log',
+    filename: 'app.log',
     format: 'json',
-    logDir: './benchmark/logs'
+    logDir: './logs'
   }
 });
 
-// Log messages with different levels
-logger.log('info', 'Server started successfully');
-logger.log('error', 'Connection failed');
-
-// Add KMP filter to exclude logs with "failed"
-logger.addPatternFilter('no-failures', 'failed', false);
-
-// Test the filter
-logger.log('info', 'Database connected');      // Written to demo.log
-logger.log('error', 'Query failed');           // Filtered out
+logger.info('App started');
 ```
 
-**What's Happening?**
+See more examples in `./perf/` for performance demos or contribute your own!
 
-1. `createLogger`: Initializes a logger that outputs JSON to benchmark/logs/demo.log.
-2. `logger.log`: Writes messages with specified levels (e.g., 'info', 'error').
-3. `addPatternFilter`: Applies KMP to filter out logs containing "failed".
-4. **Result**: demo.log contains only `{ "level": "info", "message": "Server started successfully" }` and `{ "level": "info", "message": "Database connected" }`.
+## Usage
 
-This showcases SnapLog's ability to log efficiently and filter precisely using KMP.
+Create a logger instance with `createLogger` to leverage SnapLog’s features:
 
-## Step-by-Step Instructions to Test SnapLog
+```javascript
+import { createLogger } from 'snaplog';
 
-### Step 1: Clone the Repository
+const logger = createLogger({
+  fileOptions: {
+    filename: 'app.log',
+    format: 'text',
+    logDir: './logs'
+  }
+});
 
-Start by downloading the SnapLog project from GitHub:
+// Basic logging
+logger.info('Server running');
+logger.error('Connection issue');
+
+// Single-pattern filter with KMP
+logger.addPatternFilter('no-errors', 'error', false);
+logger.info('Database online');     // Logged
+logger.error('Query error');        // Filtered
+
+// Multi-pattern filter with Aho-Corasick
+logger.addMultiPatternFilter('errors-only', ['timeout', 'failed'], true);
+logger.info('Task completed');      // Filtered
+logger.error('Request timeout');    // Logged
+
+// Add a processor
+logger.addProcessor('timestamp', (info) => {
+  info.timestamp = new Date().toISOString();
+});
+
+// Switch file
+logger.setFile({ filename: 'errors.log' });
+logger.error('Task failed');        // Logged to errors.log
+```
+
+## Features
+
+- **High Performance**: Buffered file output for minimal overhead.
+- **KMP Filtering**: Fast single-pattern matching with cached LPS arrays.
+- **Aho-Corasick Filtering**: Efficient multi-pattern matching in one pass.
+- **Customizable Output**: JSON or text format, configurable file locations.
+- **Processors**: Transform logs before writing with custom functions.
+- **Chainable API**: Fluent method calls for easy setup.
+
+## API
+
+Create a logger with `createLogger`:
+
+```javascript
+const logger = createLogger({
+  fileOptions: { filename: 'logs.log', format: 'json', logDir: './logs' }
+});
+```
+
+| Method                              | Description                                | Parameters |
+|-------------------------------------|--------------------------------------------|------------|
+| `logger.log(level, message, [meta])` | Logs a message with optional metadata.     | `level`: string, `message`: string, `meta`: object (optional) |
+| `logger.<level>(message, [meta])`   | Shorthand for levels (e.g., info, error).  | `message`: string, `meta`: object (optional) |
+| `logger.addPatternFilter(name, pattern, allow)` | Adds a KMP filter. | `name`: string, `pattern`: string, `allow`: boolean (default: true) |
+| `logger.addMultiPatternFilter(name, patterns, allow)` | Adds an Aho-Corasick filter. | `name`: string, `patterns`: string[], `allow`: boolean (default: true) |
+| `logger.removeFilter(name)`        | Removes a filter by name.                  | `name`: string |
+| `logger.setFile(options)`          | Updates the output file configuration.     | `options`: { filename?, format?, logDir? } |
+| `logger.addProcessor(name, fn)`    | Adds a processor to transform logs.        | `name`: string, `fn`: (info) => void |
+| `logger.removeProcessor(name)`     | Removes a processor by name.               | `name`: string |
+
+## Configuration Options for `createLogger`:
+
+| Option               | Default     | Description                                |
+|----------------------|-------------|--------------------------------------------|
+| `fileOptions.filename` | `'app.log'` | Name of the output log file.              |
+| `fileOptions.format`   | `'json'`    | Log format ('json' or 'text').            |
+| `fileOptions.logDir`   | `'./logs'`  | Directory for log files (created if missing). |
+
+## Logging Levels
+
+SnapLog uses a simple level system (customizable via `constants.js`):
+
+```javascript
+const levels = {
+  error: 0,
+  warn: 1,
+  info: 2,
+  debug: 3
+};
+```
+
+Level-specific methods (e.g., `logger.info`, `logger.error`) are auto-generated.
+
+## Prerequisites
+
+- **Node.js**: v16+ (v18+ recommended)
+- **npm**: For installation
+
+## Development Setup
+
+Clone the repo:
 
 ```bash
 git clone https://github.com/NirbhayMeghpara/SnapLog.git
 cd snaplog
 ```
 
-- This creates a local copy of the project in a folder named `snaplog`.
-
-### Step 2: Install Dependencies
-
-Install the required Node.js packages:
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-- This installs `winston` (for benchmarking), `chalk` (for colored output), and Node.js built-in modules like `fs` and `perf_hooks`.
-- Ensure no errors appear; check Node.js version with `node -v` if issues arise.
-
-### Step 3: Verify Project Structure
-
-Check that your folder contains these key files:
-
-- `src/snaplog.js`: Core logger with KMP filtering.
-- `src/transports/fileTransport.js`: File output logic.
-- `src/utils/constants.js`: Log levels.
-- `benchmark.js`: Benchmark script comparing SnapLog and Winston.
-- `package.json`: Project metadata and scripts.
-- Optional: `src/logGenerator.js` and `benchmark/testData/10000_logs.json` (if provided).
-
-### Step 4: Generate Test Logs (Optional)
-
-If `benchmark/testData/10000_logs.json` isn't included, generate test data:
+Run tests:
 
 ```bash
-npm run generate-logs
+npm run test
 ```
 
-- Requires `src/logGenerator.js` (if not present, see note below).
-- Creates `benchmark/testData/10000_logs.json` with 10,000 log entries (mix of levels, some with "failed").
-- **Note**: If `logGenerator.js` isn't provided, you'll need a sample JSON file with entries like `{ "level": "info", "message": "Test log", "metadata": {} }`. Contact me or create one manually.
-
-### Step 5: Prepare the Logs Directory
-
-Ensure the output directory exists:
+Explore performance demos:
 
 ```bash
-mkdir -p benchmark/logs
+npm run perf:generate  # Generate test logs
+npm run perf:benchmark # Run benchmarks
 ```
 
-- Creates `benchmark/logs/` for benchmark output files (snaplog-benchmark.log, etc.).
+## Contributing
 
-### Step 6: Run the Benchmark
+SnapLog is open-source and welcomes contributions! Whether you’ve spotted a bug, have a feature idea, or want to make improvements, we’d love to hear from you.
 
-Execute the benchmark suite to test SnapLog's performance:
+Here’s how you can contribute:
 
-```bash
-npm run benchmark
-```
+1. **Report an Issue**  
+   Found a bug or have a feature suggestion? [Create a new issue](https://github.com/NirbhayMeghpara/SnapLog/issues) with a clear description. Feel free to label it appropriately (`bug`, `enhancement`, etc.).
 
-- Runs `node --expose-gc benchmark.js`, enabling garbage collection for accurate memory stats.
-- Performs two tests:
-  - **Raw Logging**: Logs all entries without filtering.
-  - **Filtered Logging**: Filters out logs with "failed".
-- Outputs results to the terminal and files in `benchmark/logs/`.
+2. **Discuss a Feature**  
+   If you have an idea and would like to collaborate or need clarification, don’t hesitate to [connect with me](mailto:nirbhaymeghpara123@gmail.com) directly or open a discussion/issue. I’m happy to brainstorm and build great features together.
 
-### Step 7: Analyze the Results
+3. **Contribute Code**  
+   - Fork the repository  
+   - Create your feature branch:  
+     ```bash
+     git checkout -b feature/your-feature-name
+     ```  
+   - Commit your changes:  
+     ```bash
+     git commit -m "Add: your message"
+     ```  
+   - Push to the branch:  
+     ```bash
+     git push origin feature/your-feature-name
+     ```  
+   - Submit a pull request on GitHub
 
-**Terminal Output**: Look for:
-- "Logging Benchmark": Time, ops/sec, logs written.
-- "Filtering Benchmark": Same metrics with filtered logs.
-- "Performance Comparison": SnapLog vs. Winston (SnapLog should be faster with KMP).
+4. **Guidelines**
+   - Include relevant unit tests for any new features or fixes.
+   - Follow the existing coding style and structure.
+   - Keep pull requests focused and well-documented.
+   - Update documentation if your changes affect usage or behavior.
 
-**Log Files**:
-- `benchmark/logs/snaplog-benchmark.log`: Raw logs.
-- `benchmark/logs/winston-benchmark.log`: Raw logs.
-- `benchmark/logs/snaplog-filtered.log`: Filtered logs.
-- `benchmark/logs/winston-filtered.log`: Filtered logs.
-- Verify filtering: Check `*-filtered.log` files—no logs should contain "failed".
+---
 
-### Step 8: Test SnapLog Manually (Optional)
-
-To explore SnapLog's API:
-
-Create `test.js`:
-```javascript
-const { createLogger } = require('./src/snaplog');
-const logger = createLogger({ 
-  fileOptions: { 
-    filename: 'test.log', 
-    format: 'json', 
-    logDir: './benchmark/logs' 
-  } 
-});
-
-logger.log('info', 'Test message');
-logger.addPatternFilter('no-errors', 'error', false);
-logger.log('error', 'This won\'t log');
-logger.setFile({ filename: 'test2.log' });
-logger.log('info', 'Switched file');
-```
-
-Run it:
-```bash
-node test.js
-```
-
-Check `benchmark/logs/test.log` and `benchmark/logs/test2.log`.
-
-## Expected Outcome
-
-- **Raw Logging**: SnapLog logs entries faster than Winston.
-- **Filtered Logging**: SnapLog's KMP filtering outperforms Winston.
-- **Files**: Separate raw and filtered logs, with filtering applied correctly.
-
-## Troubleshooting
-
-- "Cannot find module": Rerun `npm install`.
-- No logs in `benchmark/logs/`: Ensure `10000_logs.json` exists and is valid.
-- Benchmark fails: Check Node.js version; run `node --expose-gc benchmark.js` manually.
+Looking forward to your contributions! 🚀
 
 ## Why SnapLog?
 
-SnapLog addresses inefficiencies in traditional loggers (e.g., Winston) for high-frequency environments, offering faster processing and precise filtering.
-
-## Acknowledgments
-
-This project was developed under the guidance of [Dr. Chris Whidden](https://www.dal.ca/faculty/computerscience/faculty-staff/chris-whidden.html) as the final project for the Algorithm Engineering (CSCI 6105) course in Winter 2025 at Dalhousie University, 
+SnapLog prioritizes performance with optimized algorithms, offering faster filtering and logging than traditional tools, perfect for real-time, high-throughput applications.
 
 ## License
 
