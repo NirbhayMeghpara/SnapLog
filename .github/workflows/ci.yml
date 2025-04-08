@@ -25,13 +25,11 @@ jobs:
         run: npm install
 
       - name: Run Jest Tests and Report Coverage
-        run: npm run test:coverage | coveralls
+        run: npm run test:coverage
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
 
       - name: Upload Coverage to Coveralls
-        run: |
-          npm install --save-dev coveralls
-          coveralls < coverage/lcov-report/lcov-report.json
+        run: npm run coveralls
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}

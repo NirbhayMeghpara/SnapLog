@@ -7,6 +7,7 @@
   "scripts": {
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "coveralls": "cat ./coverage/lcov-report/lcov-report.html | coveralls",
     "perf:generate": "node perf/logGenerator.js",
     "perf:benchmark": "node --expose-gc perf/benchmark.js"
   },
