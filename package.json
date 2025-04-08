@@ -1,6 +1,6 @@
 {
   "name": "snaplogx",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A high-performance logging library with advanced filtering algorithms",
   "main": "src/snaplog.js",
   "type": "module",
