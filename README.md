@@ -11,11 +11,11 @@ SnapLog is built for speed and precision in logging, targeting applications that
 Install SnapLog and start logging with a simple setup:
 
 ```bash
-npm install snap-log
+npm install snaplogx
 ```
 
 ```javascript
-import { createLogger } from 'snap-log';
+import { createLogger } from 'snaplogx';
 
 const logger = createLogger({
   fileOptions: {
@@ -35,7 +35,7 @@ See more examples in `./perf/` for performance demos or contribute your own!
 Create a logger instance with `createLogger` to leverage SnapLog’s features:
 
 ```javascript
-import { createLogger } from 'snap-log';
+import { createLogger } from 'snaplogx';
 
 const logger = createLogger({
   fileOptions: {
