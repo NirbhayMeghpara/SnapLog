@@ -2,6 +2,9 @@
 
 A high-performance logging library for Node.js with advanced pattern-matching filters.
 
+[![Version npm](https://img.shields.io/npm/v/snaplogx.svg?style=flat-square)](https://www.npmjs.com/package/snaplogx)
+[![Coverage Status](https://coveralls.io/repos/github/NirbhayMeghpara/SnapLog/badge.svg?branch=main)](https://coveralls.io/github/NirbhayMeghpara/SnapLog?branch=main)
+
 ## Motivation
 
 SnapLog is built for speed and precision in logging, targeting applications that demand real-time, high-volume log processing. It uses optimized **Knuth-Morris-Pratt (KMP)** for single-pattern filtering and **Aho-Corasick** for multi-pattern filtering, offering a lightweight alternative to traditional loggers like Winston. With a focus on performance and flexibility, SnapLog supports file-based logging with customizable filters and processors, making it extensible for diverse use cases.
